@@ -1,0 +1,13 @@
+name = "SIR_model_pkg"
+uuid = "82bebe15-c568-4369-8213-34710500e391"
+authors = ["lydia237 <lxuanxuan236@gmail.com> and contributors"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
