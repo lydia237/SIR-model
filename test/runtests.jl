@@ -1,6 +1,7 @@
 using SIR_model_pkg
 using DifferentialEquations
 using Test
+using Plots
 
 @testset "SIR_model_pkg.jl" begin
     # Write your tests here.

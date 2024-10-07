@@ -53,8 +53,10 @@ function run_sir_model(model_type::Symbol, c, β, γ, S0, I0, R0, tspan; λ=noth
     else
         error("Unknown or incomplete model type")
     end
-
-    return solve(prob)
+    sol = solve(prob)  # Assign the solution to `sol`
+    
+    # Plotting the result
+    return plot(sol, title="SIR Model", label=["Susceptible" "Infected" "Recovered"], lw=2, legend=:bottomright)
 end
 
 # basic run function 
@@ -65,3 +67,5 @@ function run_simulation(c, β, γ, S0, I0, R0, tspan)
     sol = solve(prob, saveat = 0.2)
     return sol
 end
+
+run_sir_model(:basic, 10, 0.03, 0.1, 4999, 1, 0, (0.0, 180.0))
