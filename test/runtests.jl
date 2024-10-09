@@ -5,7 +5,7 @@ using Plots
 
 @testset "SIR_model_pkg.jl" begin
     # Write your tests here.
-    # 定义公共的参数
+    # initial parameters
     c = 10
     β = 0.03
     γ = 0.1
@@ -32,7 +32,7 @@ using Plots
         @test λ_computed ≈ β * I_model atol=1e-5  # Compare manually computed and theoretical values
     end
 
-    # 测试带群体免疫的 SIR 模型
+    # held immunity 
     @testset "SIR Model with Herd Immunity" begin
         herd_threshold = 1 - (1 / Ro)  # Setting the threshold for herd immunisation
         sol = run_sir_model(:herd_immunity, c, β, γ, S0, I0, R0, tspan; herd_threshold=herd_threshold)
