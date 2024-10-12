@@ -2,42 +2,38 @@ using SIR_model_pkg
 using DifferentialEquations
 using Test
 using Plots
+using Revise
 
 @testset "SIR_model_pkg.jl" begin
-    # Write your tests here.
-    # initial parameters
-    c = 10
-    β = 0.03
-    γ = 0.1
-    S0 = 4999
-    I0 = 1
-    R0 = 0
-    tspan = (0.0, 180.0)
+    # Define initial parameters for the tests
+    c = 8  # Contact rate
+    γ = 0.1429  # Recovery rate (1/7 days)
+    ps = 0.2  # Proportion with severe illness
+    γs = 0.0714  # Recovery rate for severe illness (1/14 days)
+    α = 0.0333  # Re-susceptibility rate (1/30 days)
+    S0 = 5999  # Initial susceptible population
+    I0 = 1  # Initial infected population
+    Is0 = 0  # Initial severely ill population
+    R0 = 0  # Initial recovered population
+    tspan = (0.0, 25.0)  # Time span for the simulation
 
-    Ro = (c * β) / γ
+    # Define the best β and ps values for optimization testing
+    β = 0.0353  # Transmission rate obtained from optimization
+    ps_optimized = 0.15  # Proportion with severe illness from optimization
 
-    # test basic SIR model
+    # Test basic SIR model function
     @testset "Basic SIR Model" begin
-        sol = run_sir_model(:basic, c, β, γ, S0, I0, R0, tspan)
-        @test sum(sol.u[1]) == S0 + I0 + R0  # the total population shoule remains the same
-    end
+        sol = run_sir_model(c, β, γ, ps_optimized, γs, α, S0, I0, Is0, R0, tspan)
 
-    # test SIR model with force of infection
-    @testset "SIR Model with Force of Infection" begin
-        λ_init = 0.05  # Initial infection force
-        sol = run_sir_model(:force_of_infection, c, β, γ, S0, I0, R0, tspan; λ=λ_init)
-        @test sum(sol.u[1]) ≈ S0 + I0 + R0  # Ensure the total population remains constant
-        I_model = sol.u[10][2]  # Infected individuals at the 10th time point
-        λ_computed = β * I_model  # Manually calculate the force of infection λ = β * I
-        @test λ_computed ≈ β * I_model atol=1e-5  # Compare manually computed and theoretical values
-    end
+        # Ensure the total population remains constant
+        total_population = sol[1, :] .+ sol[2, :] .+ sol[3, :] .+ sol[4, :]
+        @test all(total_population .≈ S0 + I0 + Is0 + R0)  # Total population should remain unchanged
 
-    # held immunity 
-    @testset "SIR Model with Herd Immunity" begin
-        herd_threshold = 1 - (1 / Ro)  # Setting the threshold for herd immunisation
-        sol = run_sir_model(:herd_immunity, c, β, γ, S0, I0, R0, tspan; herd_threshold=herd_threshold)
-        @test sol[2,end] ≈ 0 atol=1e-2    # the final infected person should be 0
-        @test sol[3,end] > herd_threshold * (S0 + I0 + R0) 
+        # Ensure the model runs correctly without negative values
+        @test all(sol[1, :] .>= 0)  # Susceptible should never be negative
+        @test all(sol[2, :] .>= 0)  # Infected should never be negative
+        @test all(sol[3, :] .>= 0)  # Severe illness should never be negative
+        @test all(sol[4, :] .>= 0)  # Recovered should never be negative
     end
 
 end

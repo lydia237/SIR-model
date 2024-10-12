@@ -3,6 +3,7 @@ module SIR_model_pkg
 # Import necessary packages
 using DifferentialEquations
 using Plots
+using Revise
 
 # Export relevant functions for external usage
 export sir_model
