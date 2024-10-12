@@ -84,9 +84,9 @@ function calculate_peak_infection(sol)
     return peak_infected, peak_time
 end
 
-function run_simulation_peak(c, β, γ, S0, I0, R0, tspan)
-    u0 = [S0, I0, R0]
-    p = [c, β, γ]
+function run_simulation_base(c, β, γ, ps , γs, α, S0, I0, Is0, R0, tspan)
+    u0 = [S0, I0, Is0, R0]
+    p = [c, β, γ, ps , γs, α]
     prob = ODEProblem(sir_model!, u0, tspan, p)
     sol = solve(prob, saveat = 1)
     return sol
@@ -96,6 +96,13 @@ function calculate_herd_immunity_threshold(c, β, γ)
     Ro = c * β / γ
     herd_immunity_threshold = 1 - (1 / Ro)
     return herd_immunity_threshold
+end
+
+function error_num(model_data, data)
+    if length(model_data) != length(data)
+        println("Error: Lengths of model data and real data do not match.")
+    end
+    return sum((model_data[i] - data[i])^2 for i in eachindex(model_data, data))
 end
 
 
@@ -109,38 +116,47 @@ c = 15
 herd_threshold = calculate_herd_immunity_threshold(c, β_refined, γ)
 println("Herd Immunity Threshold: $herd_threshold")
 =#
-#= calculate the best beta
-days = [1:1:30]
-infected_data = [5, 10, 19, 37, 71, 136, 260, 486, 882, 1516, 2399, 3407, 4300, 4882, 5116, 5080, 4875, 4582, 4251, 3913, 3583, 3271, 2979, 2708, 2460, 2233, 2026, 1837, 1665, 1509]
+#calculate the best beta
+infected_days = 15:25
+severe_days = 21:25
+infected_data = [11, 7, 20, 3, 29, 14, 11, 12, 16, 10, 58]  
+severe_data = [0, 0, 1, 2, 5]  
 
 global min_error = Inf  # Initialize global variable to track the minimum error
 global best_beta = 0.0  # Initialize global variable to track the best beta
+global appropriate_ps = 0.0
 beta_range = 0.010:0.0001:0.050  # Define the range of beta values
+ps_range = 0.15:0.001:0.25 # Define the range of ps_values
 
 for β in beta_range
-    sol = run_simulation_peak(15, β, 0.1, 9995, 5, 0, (0.0, 30.0))
+    for ps in ps_range
+        sol = run_simulation_base(8, β, 0.1429, ps, 0.0714, 0.0333, 5999, 1, 0, 0, (0.0, 25.0))
 
-    function error_num(model_data, data)
-        if length(model_data) != length(data)
-            println("Error: Lengths of model data and real data do not match.")
+        global infected_model_data = [sol(t)[2] for t in infected_days]  # Extract the infected data from the solution
+        global severe_model_data = [sol(t)[3] for t in severe_days]  # Extract the severe data from the solution
+        global squared_error = error_num(infected_model_data, infected_data) + error_num(severe_model_data, severe_data) # Compute the squared error
+
+        # Update the minimum error and best beta if the current beta is better
+        if squared_error < min_error
+            global min_error = squared_error
+            global best_beta = β
+            global appropriate_ps = ps 
+            global sol_optimal = sol
         end
-        return sum((model_data[i] - data[i])^2 for i in eachindex(model_data, data))
-    end
-
-    global infected_model_data = [sol(t)[2] for t in 1:1:30]  # Extract the infected data from the solution
-    global squared_error = error_num(infected_model_data, infected_data)  # Compute the squared error
-
-    # Update the minimum error and best beta if the current beta is better
-    if squared_error < min_error
-        global min_error = squared_error
-        global best_beta = β
     end
 end
 
 # Print the best beta and its corresponding minimum error
 println("Best β: ", best_beta)
+println("Appropriate ps: ", appropriate_ps)
 println("Minimum squared error: ", min_error)
-=#
+plt = plot()
+plot!(plt, sol_optimal.t, sol_optimal[2, :], label="Modeled Infected (u[2])", xlabel="Time (days)", ylabel="Population", lw=2)
+plot!(plt, sol_optimal.t, sol_optimal[3, :], label="Modeled Severe Illness (u[3])", lw=2)
+scatter!(plt, infected_days, infected_data, label="Real Infected Data", color=:red, marker=:circle)
+scatter!(plt, severe_days, severe_data, label="Real Severe Illness Data", color=:blue, marker=:square)
+display(plt)
+
 
 #=3.2
 #Example of calculating peak infection
@@ -149,5 +165,5 @@ peak_infected, peak_time = calculate_peak_infection(sol)
 println("Peak Infection: $peak_infected at time $peak_time")
 =#
 
-run_sir_model(:basic, 8, 0.09, 0.1429, 0.20, 0.0714, 0.0333, 5999, 1, 0, 0, (0.0, 90.0))
+# 1. run_sir_model(:basic, 8, 0.09, 0.1429, 0.20, 0.0714, 0.0333, 5999, 1, 0, 0, (0.0, 90.0))
 #3.1 run_simulation(15, 0.03, 0.1, 9995, 5, 0, (0.0, 30.0))
