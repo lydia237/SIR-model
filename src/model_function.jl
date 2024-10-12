@@ -108,10 +108,16 @@ beta_range = 0.010:0.0001:0.050  # Transmission rate (β) to be optimized
 # Optimize the parameters
 best_beta, best_ps, min_error, sol_optimal = optimize_parameters(beta_range, ps_range, c, γ, γs, α, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
 
+# Herd immunity threshold
+Ro = c * best_beta / γ
+pc = 1 - 1/Ro 
+
 # Print the results of the optimization
 println("Best β (transmission probability): ", best_beta)
 println("Best ps (proportion with severe illness): ", best_ps)
 println("Minimum squared error: ", min_error)
+println("basic reproduction number: ", Ro)
+println("Herd Immunity Threshold: ", pc)
 
 # After optimization, run the model over t = 0 to 90 days using the best parameters
 full_tspan = (0.0, 210.0)  # Time span for the full simulation
