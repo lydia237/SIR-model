@@ -84,6 +84,19 @@ function plot_overall_model(sol, tspan)
     display(plt)  # Display the plot
 end
 
+function plot_error_vs_beta(beta_range, ps, c, γ, γs, α, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
+    errors = []
+    for β in beta_range
+        sol = run_sir_model(c, β, γ, ps, γs, α, S0, I0, Is0, R0, tspan)
+        infected_model_data = [sol(t)[2] for t in infected_days]
+        severe_model_data = [sol(t)[3] for t in severe_days]
+        total_error = error_num(infected_model_data, infected_data) + error_num(severe_model_data, severe_data)
+        push!(errors, total_error)
+    end
+    plt = plot(beta_range, errors, xlabel="Beta", ylabel="Error", label="Error as a Function of Beta")
+    display(plt)
+end
+
 # Initial parameters and values provided by the Department of Health
 c = 8  # Average number of contacts per person per day
 γ = 0.1429  # Recovery rate (1/7 days)
@@ -103,7 +116,7 @@ infected_data = [11, 7, 20, 3, 29, 14, 11, 12, 16, 10, 58]  # Infected data for 
 severe_data = [0, 0, 1, 2, 5]  # Severe illness data for days 21-25
 
 # Define the range of possible values for β
-beta_range = 0.010:0.0001:0.050  # Transmission rate (β) to be optimized
+beta_range = 0.025:0.0001:0.045  # Transmission rate (β) to be optimized
 
 # Optimize the parameters
 best_beta, best_ps, min_error, sol_optimal = optimize_parameters(beta_range, ps_range, c, γ, γs, α, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
@@ -128,3 +141,6 @@ plot_overall_model(sol_full, full_tspan)
 
 # Plot the optimal model against the real data
 plot_model_vs_data(sol_optimal, infected_days, severe_days, infected_data, severe_data)
+
+# Plot the error against beta
+plot_error_vs_beta(beta_range, best_ps, c, γ, γs, α, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)

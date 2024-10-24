@@ -12,6 +12,7 @@ export plot_model_vs_data
 export error_num
 export optimize_parameters
 export plot_overall_model
+export plot_error_vs_beta
 
 # Include the file containing the model functions
 include("model_function.jl")
