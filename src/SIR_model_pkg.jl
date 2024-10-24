@@ -4,6 +4,7 @@ module SIR_model_pkg
 using DifferentialEquations
 using Plots
 using Revise
+using Random
 
 # Export relevant functions for external usage
 export sir_model
@@ -13,6 +14,8 @@ export error_num
 export optimize_parameters
 export plot_overall_model
 export plot_error_vs_beta
+export run_sensitivity_analysis
+export plot_sensitivity_analysis
 
 # Include the file containing the model functions
 include("model_function.jl")

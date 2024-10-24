@@ -97,6 +97,45 @@ function plot_error_vs_beta(beta_range, ps, c, γ, γs, α, S0, I0, Is0, R0, tsp
     display(plt)
 end
 
+# Function to run sensitivity analysis with varying parameters
+function run_sensitivity_analysis(param_sets, S0, I0, Is0, R0, tspan)
+    u0 = [S0, I0, Is0, R0]
+    solutions = []
+    
+    for params in param_sets
+        prob = ODEProblem(sir_model!, u0, tspan, params)
+        sol = solve(prob, saveat=0.1)
+        push!(solutions, sol)
+    end
+    
+    return solutions
+end
+
+# Function to plot sensitivity analysis with labeled parameter sets and real data points
+function plot_sensitivity_analysis(solutions, param_sets, infected_days, infected_data, severe_days, severe_data)
+    plt = plot()
+    
+    # Iterate over solutions and parameters, filter out solutions where the infected population is too large
+    for (i, sol) in enumerate(solutions)
+        params = param_sets[i]
+        β, ps = params[2], params[3]  # Now fetching β and ps for the legend
+
+        # Filter out solutions where the final infected population exceeds a threshold (e.g., 100)
+        if maximum(sol[2, :]) <= 200  # Set a threshold to filter out extreme solutions
+            plot!(plt, sol.t, sol[2, :], label="β=$β, ps=$ps", lw=2)  # Update label with β and ps
+        end
+    end
+    
+    # Add real data points as scatter plot on top of the sensitivity analysis
+    scatter!(plt, infected_days, infected_data, label="Real Infected Data", color=:red, marker=:circle)
+
+    # Set axis labels
+    xlabel!("Time (days)")
+    ylabel!("Infected Population (I)")
+    
+    display(plt)  # Display the plot
+end
+
 # Initial parameters and values provided by the Department of Health
 c = 8  # Average number of contacts per person per day
 γ = 0.1429  # Recovery rate (1/7 days)
@@ -131,6 +170,19 @@ println("Best ps (proportion with severe illness): ", best_ps)
 println("Minimum squared error: ", min_error)
 println("basic reproduction number: ", Ro)
 println("Herd Immunity Threshold: ", pc)
+
+# Define parameter ranges for sensitivity analysis
+transmission_probs = [0.025, 0.035, 0.045]  # Varying transmission probability (β)
+ps_values = [0.15, 0.2, 0.25]  # Varying proportion with severe illness (ps)
+
+# Combine parameter sets for the simulations
+param_sets = [[8, β, ps, 0.1429, 0.0714, 0.0333] for β in transmission_probs, ps in ps_values]
+
+# Run sensitivity analysis
+solutions = run_sensitivity_analysis(param_sets, S0, I0, Is0, R0, tspan)
+
+# Plot sensitivity analysis with labeled parameter sets and real data points
+plot_sensitivity_analysis(solutions, param_sets, infected_days, infected_data, severe_days, severe_data)
 
 # After optimization, run the model over t = 0 to 90 days using the best parameters
 full_tspan = (0.0, 210.0)  # Time span for the full simulation
