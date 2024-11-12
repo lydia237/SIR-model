@@ -47,35 +47,39 @@ function error_num(model_data, data)
 end
 
 # Function to optimize β (transmission probability) and ps (proportion of severe illness)
-function optimize_parameters(beta_range, ps_range, c, γ, γs, α, epsilon, phi, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
+function optimize_parameters(beta_range, ps_range, c, γ, γs, α, epsilon, coverage_range, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
     global min_error = Inf  # Initialize the minimum error as infinity
     global best_beta = 0.0  # Initialize the best beta
     global best_ps = 0.0  # Initialize the best ps
+    global best_phi = 0.0
     global sol_optimal  # To store the solution with the best parameters
 
     # Search over all combinations of β and ps
     for β in beta_range
         for ps in ps_range
-            sol = run_sir_model(c, β, γ, ps, γs, α, epsilon, phi, S0, I0, Is0, R0, tspan)  # Run the model
+            for phi in coverage_range
+                sol = run_sir_model(c, β, γ, ps, γs, α, epsilon, phi, S0, I0, Is0, R0, (0.0, 80.0))  # Run the model
 
-            # Extract model predictions for infected and severe illness on the specified days
-            infected_model_data = [sol(t)[2] for t in infected_days]
-            severe_model_data = [sol(t)[3] for t in severe_days]
+                # Extract model predictions for infected and severe illness on the specified days
+                infected_model_data = [sol(t)[2] for t in infected_days]
+                severe_model_data = [sol(t)[3] for t in severe_days]
 
-            # Calculate the total error (sum of infected and severe illness errors)
-            total_error = error_num(infected_model_data, infected_data) + error_num(severe_model_data, severe_data)
+                # Calculate the total error (sum of infected and severe illness errors)
+                total_error = error_num(infected_model_data, infected_data) + error_num(severe_model_data, severe_data)
 
-            # Update the best parameters if this combination gives a smaller error
-            if total_error < min_error
-                global min_error = total_error
-                global best_beta = β
-                global best_ps = ps
-                global sol_optimal = sol  # Save the best solution
+                # Update the best parameters if this combination gives a smaller error
+                if total_error < min_error
+                    global min_error = total_error
+                    global best_beta = β
+                    global best_ps = ps
+                    global best_phi = phi
+                    global sol_optimal = sol  # Save the best solution
+                end
             end
         end
     end
     
-    return best_beta, best_ps, min_error, sol_optimal  # Return the best parameters and the optimal solution
+    return best_beta, best_ps, best_phi, min_error, sol_optimal  # Return the best parameters and the optimal solution
 end
 
 function plot_overall_model(sol, tspan)
@@ -159,6 +163,10 @@ function plot_infected_and_severe_by_beta(beta_range, c, γ, ps, γs, α, epsilo
         plot!(severe_plot, sol.t, sol[3, :], label="β = $β", lw=2)
     end
 
+    # Add scatter plots for the real data points
+    scatter!(infected_plot, infected_days, infected_data, label="Real Infected Data", color=:red, marker=:circle)
+    scatter!(severe_plot, severe_days, severe_data, label="Real Severe Illness Data", color=:blue, marker=:square)
+
     # Display the plots
     display(infected_plot)
     display(severe_plot)
@@ -193,7 +201,7 @@ function analyze_impact_of_coverage(beta_range, coverage_range, c, γ, ps, γs, 
         plot!(infected_plot, coverage_range, peak_infected[β], label="β = $β", lw=2)
     end
     display(infected_plot)
-
+    
     # Plot peak severe illness population vs coverage for different beta values
     severe_plot = plot(xlabel="Intervention Coverage (ϕ)", ylabel="Peak Severe Illness Population (Is)", legend=:topright)
     for β in beta_range
@@ -217,10 +225,10 @@ R0 = 0  # Initial recovered population
 tspan = (0.0, 25.0)  # Time span in days
 
 # Real data provided for optimization
-infected_days = 15:25
-severe_days = 21:25
-infected_data = [11, 7, 20, 3, 29, 14, 11, 12, 16, 10, 58]  # Infected data for days 15-25
-severe_data = [0, 0, 1, 2, 5]  # Severe illness data for days 21-25
+infected_days = 15:80
+severe_days = 21:80
+infected_data = [11, 7, 20, 3, 29, 14, 11, 12, 16, 10, 58, 34, 26, 29, 51, 55, 155, 53, 67, 98, 130, 189, 92, 192, 145, 128, 68, 74, 126, 265, 154, 207, 299, 273, 190, 152, 276, 408, 267, 462, 352, 385, 221, 420, 544, 329, 440, 427, 369, 606, 416, 546, 475, 617, 593, 352, 337, 473, 673, 653, 523, 602, 551, 686, 556, 600]  # Infected data for days 15-81
+severe_data = [0, 0, 1, 2, 5, 5, 5, 2, 9, 4, 22, 0, 15, 48, 38, 57, 9, 18, 20, 0, 41, 15, 35, 36, 27, 38, 24, 40, 34, 57, 18, 29, 63, 66, 119, 76, 95, 28, 109, 136, 119, 104, 121, 93, 147, 129, 130, 161, 133, 136, 138, 139, 181, 181, 218, 183, 167, 164, 219, 220]  # Severe illness data for days 21-81
 
 # Define the range of possible values for β and coverage
 beta_range = 0.025:0.0001:0.045  # Transmission rate (β) to be optimized
@@ -228,7 +236,7 @@ beta_range_modified = 0.025:0.005:0.045
 coverage_range = 0.5:0.1:0.9  # Range of intervention coverage values
 
 # Optimize the parameters
-best_beta, best_ps, min_error, sol_optimal = optimize_parameters(beta_range, ps_range, c, γ, γs, α, epsilon, phi, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
+best_beta, best_ps, best_phi, min_error, sol_optimal = optimize_parameters(beta_range, ps_range, c, γ, γs, α, epsilon, phi, S0, I0, Is0, R0, tspan, infected_days, severe_days, infected_data, severe_data)
 
 # Herd immunity threshold
 Ro = c * best_beta / γ
@@ -237,6 +245,7 @@ pc = 1 - 1/Ro
 # Print the results of the optimization
 println("Best β (transmission probability): ", best_beta)
 println("Best ps (proportion with severe illness): ", best_ps)
+println("Best ϕ (coverage range): ", best_phi)
 println("Minimum squared error: ", min_error)
 println("basic reproduction number: ", Ro)
 println("Herd Immunity Threshold: ", pc)
@@ -272,4 +281,3 @@ plot_infected_and_severe_by_beta(beta_range_modified, c, γ, best_ps, γs, α, e
 
 # Run the analysis
 analyze_impact_of_coverage(beta_range_modified, coverage_range, c, γ, best_ps, γs, α, S0, I0, Is0, R0, (0.0, 210.0))
-
