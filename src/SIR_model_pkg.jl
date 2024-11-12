@@ -16,6 +16,8 @@ export plot_overall_model
 export plot_error_vs_beta
 export run_sensitivity_analysis
 export plot_sensitivity_analysis
+export plot_infected_and_severe_by_beta  
+export analyze_impact_of_coverage
 
 # Include the file containing the model functions
 include("model_function.jl")
