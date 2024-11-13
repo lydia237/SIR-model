@@ -5,7 +5,7 @@ function sir_model!(dpop, pop, p, t)
     N = S + I + Is + R  # Total population
     
     # Apply intervention after day 30
-    if t >= 30.0
+    if t > 30.0
         λ = c * (1 - epsilon * phi) * β * I / N  # Adjusted force of infection with intervention
     else
         λ = c * β * I / N  # Original force of infection without intervention
